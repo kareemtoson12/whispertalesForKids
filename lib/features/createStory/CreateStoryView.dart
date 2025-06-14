@@ -177,8 +177,8 @@ class _CreateStoryViewState extends State<CreateStoryView>
                                           ),
                                     ),
                                     _StoryTypeButton(
-                                      icon: Icons.add,
-                                      label: 'Custom',
+                                      icon: Icons.auto_awesome,
+                                      label: 'Fantasy',
                                       color: Colors.purpleAccent,
                                       selected: _selectedTypeIndex == 5,
                                       onTap:
