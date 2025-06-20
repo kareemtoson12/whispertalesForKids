@@ -4,7 +4,8 @@ import 'package:gp/core/commanWidgets/magical_background_painter.dart';
 import 'package:gp/core/services/tts_service.dart';
 
 class DisplayStory extends StatefulWidget {
-  const DisplayStory({Key? key}) : super(key: key);
+  final String story;
+  const DisplayStory({Key? key, required this.story}) : super(key: key);
 
   @override
   State<DisplayStory> createState() => _DisplayStoryState();
@@ -19,9 +20,7 @@ class _DisplayStoryState extends State<DisplayStory>
   late List<double> _sparkleRadii;
   late TTSService _ttsService;
   bool _isPlaying = false;
-
-  final String _storyText =
-      'Once upon a time, in a magical forest filled with wonder, there lived a small kitten named Luna. Luna wasn\'t an ordinary kitten - she had sparkling blue fur and tiny stars that twinkled in her whiskers!\n\nEvery morning, Luna would wake up to the sound of singing birds and dancing butterflies. She would stretch her tiny paws and yawn, showing her pearly white teeth. Then, she would embark on another magical adventure through the enchanted forest.\n\nOne day, Luna discovered a hidden path that led to a secret garden where flowers could talk and trees could dance. The garden was home to many magical creatures who became Luna\'s friends...';
+  late String _storyText;
 
   @override
   void initState() {
@@ -33,6 +32,7 @@ class _DisplayStoryState extends State<DisplayStory>
 
     _ttsService = TTSService();
     _initializeAnimationData();
+    _storyText = widget.story;
   }
 
   void _initializeAnimationData() {
@@ -223,21 +223,7 @@ class _DisplayStoryState extends State<DisplayStory>
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.auto_awesome,
-                                  color: Colors.pinkAccent,
-                                  size: 20,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Telling your story as the Magical Cat!',
-                                  style: TextStyle(
-                                    color: Colors.pinkAccent,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                              children: [],
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -286,8 +272,8 @@ class _DisplayStoryState extends State<DisplayStory>
                             child: Column(
                               children: [
                                 const SizedBox(height: 12),
-                                const Text(
-                                  'Once upon a time, in a magical forest filled with wonder, there lived a small kitten named Luna. Luna wasn\'t an ordinary kitten - she had sparkling blue fur and tiny stars that twinkled in her whiskers!\n\nEvery morning, Luna would wake up to the sound of singing birds and dancing butterflies. She would stretch her tiny paws and yawn, showing her pearly white teeth. Then, she would embark on another magical adventure through the enchanted forest.\n\nOne day, Luna discovered a hidden path that led to a secret garden where flowers could talk and trees could dance. The garden was home to many magical creatures who became Luna\'s friends...',
+                                Text(
+                                  _storyText,
                                   style: TextStyle(
                                     color: Colors.purple,
                                     fontSize: 16,

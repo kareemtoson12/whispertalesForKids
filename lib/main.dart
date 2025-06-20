@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:gp/features/questions/qs.dart';
 import 'features/splash/splashView.dart';
+import 'features/createStory/CreateStoryView.dart';
 
 void main() {
   runApp(const MyApp());
@@ -35,7 +36,7 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => SplashView(),
+        '/': (context) => CreateStoryView(),
         '/magical-quiz': (context) => const MagicalQuizScreen(),
       },
     );

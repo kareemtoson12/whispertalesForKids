@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:gp/features/login/loginView.dart';
 import 'package:gp/features/DisplayStory/displayStory.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class CreateStoryView extends StatefulWidget {
   @override
@@ -11,6 +13,7 @@ class CreateStoryView extends StatefulWidget {
 class _CreateStoryViewState extends State<CreateStoryView>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  final TextEditingController _promptController = TextEditingController();
 
   // Add selectedType state
   int? _selectedTypeIndex;
@@ -27,6 +30,26 @@ class _CreateStoryViewState extends State<CreateStoryView>
     ),
   );
 
+  // Helper to map type index to genre string
+  String? get _selectedGenre {
+    switch (_selectedTypeIndex) {
+      case 0:
+        return 'superhero';
+      case 1:
+        return 'action';
+      case 2:
+        return 'drama';
+      case 3:
+        return 'thriller';
+      case 4:
+        return 'horror';
+      case 5:
+        return 'sci_fi';
+      default:
+        return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -39,6 +62,7 @@ class _CreateStoryViewState extends State<CreateStoryView>
   @override
   void dispose() {
     _controller.dispose();
+    _promptController.dispose();
     super.dispose();
   }
 
@@ -178,7 +202,7 @@ class _CreateStoryViewState extends State<CreateStoryView>
                                     ),
                                     _StoryTypeButton(
                                       icon: Icons.auto_awesome,
-                                      label: 'Fantasy',
+                                      label: 'Sci-Fi',
                                       color: Colors.purpleAccent,
                                       selected: _selectedTypeIndex == 5,
                                       onTap:
@@ -295,6 +319,7 @@ class _CreateStoryViewState extends State<CreateStoryView>
                                     ],
                                   ),
                                   child: TextField(
+                                    controller: _promptController,
                                     maxLines: 4,
                                     style: TextStyle(
                                       fontSize: 16,
@@ -342,6 +367,17 @@ class _CreateStoryViewState extends State<CreateStoryView>
                           ),
                           ElevatedButton.icon(
                             onPressed: () async {
+                              if (_selectedGenre == null ||
+                                  _promptController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Please select a story type and enter a prompt.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
                               showDialog(
                                 context: context,
                                 barrierDismissible: false,
@@ -350,12 +386,51 @@ class _CreateStoryViewState extends State<CreateStoryView>
                                       child: CircularProgressIndicator(),
                                     ),
                               );
-                              await Future.delayed(Duration(seconds: 2));
-                              if (context.mounted) {
+                              try {
+                                final response = await http.post(
+                                  Uri.parse(
+                                    'https://71bb-34-126-166-184.ngrok-free.app/generate',
+                                  ),
+                                  headers: {'Content-Type': 'application/json'},
+                                  body: jsonEncode({
+                                    'genre': _selectedGenre,
+                                    'prompt': _promptController.text.trim(),
+                                    'target_length': 100,
+                                    'max_length': 500,
+                                  }),
+                                );
                                 Navigator.of(context).pop(); // Remove progress
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const DisplayStory(),
+                                if (response.statusCode == 200) {
+                                  final data = jsonDecode(response.body);
+                                  final story =
+                                      data['generated_text'] ??
+                                      'No story generated.';
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              DisplayStory(story: story),
+                                    ),
+                                  );
+                                } else {
+                                  print(
+                                    'API ERROR: status: \\${response.statusCode}, body: \\${response.body}',
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Failed to generate story.',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                Navigator.of(context).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Error: Could not connect to story service.',
+                                    ),
                                   ),
                                 );
                               }
