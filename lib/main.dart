@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gp/features/DisplayStory/displayStory.dart';
-import 'package:gp/features/createStory/CreateStoryView.dart';
+
 import 'package:gp/features/questions/qs.dart';
 import 'features/splash/splashView.dart';
 
