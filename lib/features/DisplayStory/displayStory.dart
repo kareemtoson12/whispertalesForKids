@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:gp/core/commanWidgets/magical_background_painter.dart';
 import 'package:gp/core/services/tts_service.dart';
+import 'package:gp/features/questions/qs.dart';
 
 class DisplayStory extends StatefulWidget {
   final String story;
@@ -288,7 +289,14 @@ class _DisplayStoryState extends State<DisplayStory>
                           const SizedBox(height: 24),
                           ElevatedButton.icon(
                             onPressed: () {
-                              Navigator.pushNamed(context, '/magical-quiz');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) =>
+                                          MagicalQuizScreen(story: _storyText),
+                                ),
+                              );
                             },
                             icon: Icon(Icons.quiz, color: Colors.white),
                             label: Text('Take the Magical Quiz!'),

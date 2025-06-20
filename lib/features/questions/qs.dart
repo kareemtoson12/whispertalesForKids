@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class MagicalQuizScreen extends StatefulWidget {
-  const MagicalQuizScreen({super.key});
+  final String story;
+  const MagicalQuizScreen({Key? key, required this.story}) : super(key: key);
 
   @override
   State<MagicalQuizScreen> createState() => _MagicalQuizScreenState();
@@ -15,43 +18,9 @@ class _MagicalQuizScreenState extends State<MagicalQuizScreen>
   bool? isCorrect;
   late AnimationController _controller;
 
-  final List<Map<String, dynamic>> questions = [
-    {
-      'question': 'What did Luna the magical kitten find in the forest?',
-      'answers': [
-        {'text': 'A talking tree', 'icon': Icons.nature, 'correct': true},
-        {
-          'text': 'A pirate ship',
-          'icon': Icons.directions_boat,
-          'correct': false,
-        },
-        {
-          'text': 'A flying car',
-          'icon': Icons.airplanemode_active,
-          'correct': false,
-        },
-        {'text': 'A giant sandwich', 'icon': Icons.fastfood, 'correct': false},
-      ],
-    },
-
-    {
-      'question': 'What magical power did Luna have?',
-      'answers': [
-        {'text': 'Sparkling fur', 'icon': Icons.star, 'correct': true},
-        {'text': 'Super speed', 'icon': Icons.flash_on, 'correct': false},
-        {
-          'text': 'Invisibility',
-          'icon': Icons.visibility_off,
-          'correct': false,
-        },
-        {
-          'text': 'Fire breath',
-          'icon': Icons.local_fire_department,
-          'correct': false,
-        },
-      ],
-    },
-  ];
+  List<Map<String, dynamic>> questions = [];
+  bool isLoading = true;
+  bool hasError = false;
 
   @override
   void initState() {
@@ -60,18 +29,63 @@ class _MagicalQuizScreenState extends State<MagicalQuizScreen>
       duration: const Duration(milliseconds: 700),
       vsync: this,
     );
+    fetchQuestions();
+  }
+
+  Future<void> fetchQuestions() async {
+    setState(() {
+      isLoading = true;
+      hasError = false;
+    });
+    try {
+      final response = await http.post(
+        Uri.parse('https://fe48-34-138-27-209.ngrok-free.app/generate-mcqs'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'story': widget.story}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> mcqs = data['mcqs'] ?? [];
+        questions =
+            mcqs
+                .map<Map<String, dynamic>>(
+                  (q) => {
+                    'question': q['question'],
+                    'answers': [
+                      {'text': q['A'], 'option': 'A'},
+                      {'text': q['B'], 'option': 'B'},
+                      {'text': q['C'], 'option': 'C'},
+                    ],
+                    'correct_answer': q['correct_answer'],
+                  },
+                )
+                .toList();
+        setState(() {
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          hasError = true;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        hasError = true;
+        isLoading = false;
+      });
+    }
   }
 
   void selectAnswer(int index) {
     if (selectedAnswer != null) return;
     setState(() {
       selectedAnswer = index;
-      isCorrect = questions[currentQuestion]['answers'][index]['correct'];
+      isCorrect =
+          questions[currentQuestion]['answers'][index]['option'] ==
+          questions[currentQuestion]['correct_answer'];
     });
     _controller.forward(from: 0);
-    if (isCorrect == true) {
-      // Optionally play a sound or trigger a happy animation
-    }
   }
 
   void nextQuestion() {
@@ -198,8 +212,31 @@ class _MagicalQuizScreenState extends State<MagicalQuizScreen>
 
   @override
   Widget build(BuildContext context) {
-    final q = questions[currentQuestion];
     final screenSize = MediaQuery.of(context).size;
+    if (isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (hasError || questions.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error, color: Colors.red, size: 48),
+              SizedBox(height: 16),
+              Text('Failed to load quiz questions.'),
+              SizedBox(height: 16),
+              ElevatedButton(onPressed: fetchQuestions, child: Text('Retry')),
+            ],
+          ),
+        ),
+      );
+    }
+    final q = questions[currentQuestion];
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -273,7 +310,8 @@ class _MagicalQuizScreenState extends State<MagicalQuizScreen>
                           ...List.generate(q['answers'].length, (i) {
                             final answer = q['answers'][i];
                             final isSelected = selectedAnswer == i;
-                            final correct = answer['correct'] == true;
+                            final correct =
+                                answer['option'] == q['correct_answer'];
                             Color color;
                             if (selectedAnswer == null) {
                               color =
@@ -281,7 +319,6 @@ class _MagicalQuizScreenState extends State<MagicalQuizScreen>
                                     Colors.pinkAccent,
                                     Colors.blueAccent,
                                     Colors.purpleAccent,
-                                    Colors.greenAccent,
                                   ][i];
                             } else if (isSelected && isCorrect == true) {
                               color = Colors.green;
@@ -296,17 +333,12 @@ class _MagicalQuizScreenState extends State<MagicalQuizScreen>
                               margin: EdgeInsets.symmetric(
                                 vertical: screenSize.height * 0.01,
                               ),
-                              child: ElevatedButton.icon(
+                              child: ElevatedButton(
                                 onPressed:
                                     selectedAnswer == null
                                         ? () => selectAnswer(i)
                                         : null,
-                                icon: Icon(
-                                  answer['icon'],
-                                  color: Colors.white,
-                                  size: screenSize.height * 0.03,
-                                ),
-                                label: Padding(
+                                child: Padding(
                                   padding: EdgeInsets.symmetric(
                                     vertical: screenSize.height * 0.015,
                                   ),

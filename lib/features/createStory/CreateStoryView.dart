@@ -389,7 +389,7 @@ class _CreateStoryViewState extends State<CreateStoryView>
                               try {
                                 final response = await http.post(
                                   Uri.parse(
-                                    'https://71bb-34-126-166-184.ngrok-free.app/generate',
+                                    'https://0701-34-87-26-234.ngrok-free.app/generate',
                                   ),
                                   headers: {'Content-Type': 'application/json'},
                                   body: jsonEncode({

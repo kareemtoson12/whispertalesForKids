@@ -35,10 +35,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       initialRoute: '/',
-      routes: {
-        '/': (context) => CreateStoryView(),
-        '/magical-quiz': (context) => const MagicalQuizScreen(),
-      },
+      routes: {'/': (context) => CreateStoryView()},
     );
   }
 }
