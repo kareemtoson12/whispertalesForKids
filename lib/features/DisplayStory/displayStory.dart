@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:gp/core/commanWidgets/magical_background_painter.dart';
 import 'package:gp/core/services/tts_service.dart';
 import 'package:gp/features/questions/qs.dart';
@@ -22,6 +25,9 @@ class _DisplayStoryState extends State<DisplayStory>
   late TTSService _ttsService;
   bool _isPlaying = false;
   late String _storyText;
+  Uint8List? _imageBytes;
+  bool _isImageLoading = true;
+  bool _imageError = false;
 
   @override
   void initState() {
@@ -34,6 +40,57 @@ class _DisplayStoryState extends State<DisplayStory>
     _ttsService = TTSService();
     _initializeAnimationData();
     _storyText = widget.story;
+    _generateImage();
+  }
+
+  Future<void> _generateImage() async {
+    setState(() {
+      _isImageLoading = true;
+      _imageError = false;
+    });
+
+    try {
+      const String apiUrl =
+          'https://8b02-34-169-123-8.ngrok-free.app/generate-image';
+      final Uri uri = Uri.parse(apiUrl);
+
+      final requestBody = {
+        'prompt': widget.story,
+        'width': 1024,
+        'height': 768,
+        'steps': 4,
+        'return_format': 'image',
+      };
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: json.encode(requestBody),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _imageBytes = response.bodyBytes;
+          _isImageLoading = false;
+        });
+      } else {
+        setState(() {
+          _imageError = true;
+          _isImageLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _imageError = true;
+        _isImageLoading = false;
+      });
+    }
   }
 
   void _initializeAnimationData() {
@@ -87,6 +144,12 @@ class _DisplayStoryState extends State<DisplayStory>
 
   @override
   Widget build(BuildContext context) {
+    final storyLines = _storyText.trim().split('\n');
+    final storyTitle =
+        storyLines.isNotEmpty && storyLines.first.isNotEmpty
+            ? storyLines.first
+            : 'Your Magical Story';
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -145,88 +208,45 @@ class _DisplayStoryState extends State<DisplayStory>
                         children: [
                           const SizedBox(height: 16),
 
-                          const SizedBox(height: 8),
-                          Text(
-                            'The Magical Forest Adventure',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.headlineSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withOpacity(0.15),
-                                  blurRadius: 4,
+                          // Story Image
+                          Container(
+                            width: 300,
+                            height: 300,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 12,
+                                  spreadRadius: 2,
                                 ),
                               ],
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.network(
-                              'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=800&h=600&fit=crop',
-                              height: 400,
-                              width: 300,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (
-                                context,
-                                child,
-                                loadingProgress,
-                              ) {
-                                if (loadingProgress == null) return child;
-                                return SizedBox(
-                                  height: 120,
-                                  width: 300,
-                                  child: Center(
-                                    child: CircularProgressIndicator(
-                                      value:
-                                          loadingProgress.expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                      .cumulativeBytesLoaded /
-                                                  (loadingProgress
-                                                          .expectedTotalBytes ??
-                                                      1)
-                                              : null,
-                                    ),
-                                  ),
-                                );
-                              },
-                              errorBuilder:
-                                  (context, error, stackTrace) => Container(
-                                    height: 120,
-                                    width: 300,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[300],
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.broken_image,
-                                        color: Colors.grey,
-                                        size: 40,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child:
+                                  _isImageLoading
+                                      ? const Center(
+                                        child: CircularProgressIndicator(),
+                                      )
+                                      : _imageError || _imageBytes == null
+                                      ? const Center(
+                                        child: Icon(
+                                          Icons.error,
+                                          color: Colors.red,
+                                          size: 48,
+                                        ),
+                                      )
+                                      : Image.memory(
+                                        _imageBytes!,
+                                        fit: BoxFit.cover,
                                       ),
-                                    ),
-                                  ),
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.pinkAccent.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [],
-                            ),
-                          ),
+                          const SizedBox(height: 16),
+
+                          const SizedBox(height: 8),
+
                           const SizedBox(height: 10),
                           GestureDetector(
                             onTap: _toggleStoryPlayback,

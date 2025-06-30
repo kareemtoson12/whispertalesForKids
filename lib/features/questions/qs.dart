@@ -29,38 +29,64 @@ class _MagicalQuizScreenState extends State<MagicalQuizScreen>
       duration: const Duration(milliseconds: 700),
       vsync: this,
     );
-    fetchQuestions();
+    _fetchQuestions();
   }
 
-  Future<void> fetchQuestions() async {
+  Future<void> _fetchQuestions() async {
     setState(() {
       isLoading = true;
       hasError = false;
     });
+
     try {
+      const String apiUrl =
+          'https://1882-34-125-245-251.ngrok-free.app/generate-mcqs';
+      final Uri uri = Uri.parse(apiUrl);
+
+      final requestBody = {'story': widget.story};
+
       final response = await http.post(
-        Uri.parse('https://fe48-34-138-27-209.ngrok-free.app/generate-mcqs'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'story': widget.story}),
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: json.encode(requestBody),
       );
+
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> mcqs = data['mcqs'] ?? [];
-        questions =
-            mcqs
-                .map<Map<String, dynamic>>(
-                  (q) => {
-                    'question': q['question'],
-                    'answers': [
-                      {'text': q['A'], 'option': 'A'},
-                      {'text': q['B'], 'option': 'B'},
-                      {'text': q['C'], 'option': 'C'},
-                    ],
-                    'correct_answer': q['correct_answer'],
-                  },
-                )
-                .toList();
+        final responseData = json.decode(response.body);
+        final List<dynamic> mcqs = responseData['mcqs'];
+
+        final List<Map<String, dynamic>> formattedQuestions =
+            mcqs.map((mcq) {
+              final Map<String, dynamic> q = mcq as Map<String, dynamic>;
+              final List<Map<String, String>> answers = [];
+
+              if (q.containsKey('A')) {
+                answers.add({'text': q['A'], 'option': 'A'});
+              }
+              if (q.containsKey('B')) {
+                answers.add({'text': q['B'], 'option': 'B'});
+              }
+              if (q.containsKey('C')) {
+                answers.add({'text': q['C'], 'option': 'C'});
+              }
+              if (q.containsKey('D')) {
+                answers.add({'text': q['D'], 'option': 'D'});
+              }
+
+              return {
+                'question': q['question'],
+                'answers': answers,
+                'correct_answer': q['correct_answer'],
+              };
+            }).toList();
+
         setState(() {
+          questions = formattedQuestions;
           isLoading = false;
         });
       } else {
@@ -70,6 +96,7 @@ class _MagicalQuizScreenState extends State<MagicalQuizScreen>
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         hasError = true;
         isLoading = false;
@@ -226,11 +253,14 @@ class _MagicalQuizScreenState extends State<MagicalQuizScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error, color: Colors.red, size: 48),
-              SizedBox(height: 16),
-              Text('Failed to load quiz questions.'),
-              SizedBox(height: 16),
-              ElevatedButton(onPressed: fetchQuestions, child: Text('Retry')),
+              const Icon(Icons.error, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              const Text('Failed to load quiz questions.'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _fetchQuestions,
+                child: const Text('Retry'),
+              ),
             ],
           ),
         ),
@@ -319,6 +349,7 @@ class _MagicalQuizScreenState extends State<MagicalQuizScreen>
                                     Colors.pinkAccent,
                                     Colors.blueAccent,
                                     Colors.purpleAccent,
+                                    Colors.orangeAccent,
                                   ][i];
                             } else if (isSelected && isCorrect == true) {
                               color = Colors.green;
